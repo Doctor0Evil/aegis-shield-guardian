@@ -1,0 +1,12 @@
+- id: GHOST_LOGIN_BLOCK
+  family: GHOST_ACCESS
+  neurorights:
+    - IDENTITY_INTEGRITY
+    - MENTAL_PRIVACY
+  enforcementhint: review-escalate
+
+- id: XR_GRID_PROBE
+  family: XR_RECON
+  neurorights:
+    - MENTAL_PRIVACY
+  enforcementhint: augmented-log
