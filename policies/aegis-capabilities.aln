@@ -1,0 +1,38 @@
+# aegis-capabilities.aln
+# Monotone capability lattice with neurorights tags
+
+capability ChatUse {
+    neurorights: [MENTAL_INTEGRITY, COGNITIVE_LIBERTY]
+    description: "Access to AI chat and LLM interactions"
+}
+
+capability BciIo {
+    neurorights: [MENTAL_INTEGRITY, MENTAL_PRIVACY, IDENTITY_INTEGRITY]
+    description: "Brain‑computer interface input/output channels"
+}
+
+capability XrOverlay {
+    neurorights: [MENTAL_INTEGRITY, COGNITIVE_LIBERTY]
+    description: "Augmented reality overlays on XR devices"
+}
+
+capability KeyManagement {
+    neurorights: [IDENTITY_INTEGRITY]
+    description: "Access to cryptographic keys (bostrom, ALN, etc.)"
+}
+
+capability LogAccess {
+    neurorights: [MENTAL_PRIVACY, IDENTITY_INTEGRITY]
+    description: "Viewing user‑facing logs and audit trails"
+}
+
+capability EvidenceExport {
+    neurorights: [MENTAL_PRIVACY, COGNITIVE_LIBERTY]
+    description: "Exporting evidence bundles to external systems"
+}
+
+governance-policy {
+    monotone: true
+    neurorights-protected: [MENTAL_INTEGRITY, MENTAL_PRIVACY, COGNITIVE_LIBERTY, IDENTITY_INTEGRITY]
+    # Any rule that would remove a capability tagged with these neurorights is forbidden
+}
