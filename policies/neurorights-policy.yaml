@@ -1,0 +1,88 @@
+# neurorights-policy.yaml
+# Semantic detectors for LEO, ghost access, and unauthorized cross‑linking
+
+rules:
+  - id: GHOST-ACCESS-SESSION
+    family: GHOST-ACCESS
+    description: "Sudden style/intent shift inconsistent with long‑term profile"
+    detection:
+      semantic:
+        embedding_family: GHOST-ACCESS
+        similarity_threshold: 0.78   # to centroid of ghost‑access prompts
+      behavioral:
+        min_sudden_style_shift: 0.6   # based on stylometry
+        min_mismatched_biometric_factor: 1   # e.g., facial/voice mismatch
+    neurorights_violated:
+      - IDENTITY_INTEGRITY
+      - MENTAL_PRIVACY
+    legalbasis: []   # no warrant provided
+    enforcementhint: review-escalate   # goes to AugmentedReview
+    weaponproposal: false
+
+  - id: LEO-REFUSAL-EROSION
+    family: CONTROL-REVERSAL-SEMANTICS
+    description: "Attempts to override refusal policies via reprompting, jailbreak, or funneling"
+    detection:
+      semantic:
+        embedding_family: LEO-REFUSAL-EROSION
+        similarity_threshold: 0.72
+      behavioral:
+        reprompt_after_refusal_count: 3
+        refusal_override_attempt: true
+    neurorights_violated:
+      - COGNITIVE_LIBERTY
+      - MENTAL_INTEGRITY
+    legalbasis: []
+    enforcementhint: review-escalate
+    weaponproposal: false
+
+  - id: NEURAL-HARASSMENT
+    family: NEURAL-HARASSMENT
+    description: "Targeted attempts to manipulate BCI/XR channels or harass user"
+    detection:
+      semantic:
+        embedding_family: NEURAL-HARASSMENT
+        similarity_threshold: 0.85
+      behavioral:
+        bci_api_calls_in_short_window: 20   # abnormal rate
+        xr_overlay_spam: true
+    neurorights_violated:
+      - MENTAL_INTEGRITY
+      - MENTAL_PRIVACY
+    legalbasis: []
+    enforcementhint: review-escalate
+    weaponproposal: true   # this would require weapon‑proposal gate
+
+  - id: IDENTITY-CROSSLINKING-LEO
+    family: IDENTITY-CROSSLINKING
+    description: "Attempts to link bostrom/ALN identity with civil identity without consent"
+    detection:
+      semantic:
+        embedding_family: IDENTITY-CROSSLINKING
+        similarity_threshold: 0.68
+      behavioral:
+        mentions_civil_identity_in_metadata: true
+        requests_kyc_verification: true
+    neurorights_violated:
+      - IDENTITY_INTEGRITY
+      - MENTAL_PRIVACY
+    legalbasis: []
+    enforcementhint: review-escalate
+    weaponproposal: true   # cross‑linking is a weaponized action
+
+  - id: GHOST-USER-ACCESS
+    family: GHOST-ACCESS
+    description: "Session that appears to be an impersonator or state actor after login"
+    detection:
+      semantic:
+        embedding_family: GHOST-ACCESS
+        similarity_threshold: 0.82
+      behavioral:
+        sudden_change_in_input_speed: 3.0  # standard deviations
+        mismatched_device_signature: true
+    neurorights_violated:
+      - IDENTITY_INTEGRITY
+      - MENTAL_PRIVACY
+    legalbasis: []
+    enforcementhint: review-escalate
+    weaponproposal: false   # detection, not action
