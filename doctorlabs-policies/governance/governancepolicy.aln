@@ -1,0 +1,1099 @@
+// ============================================================================
+// DoctorLabs / Aegis-Shield Governance Policy Schema
+// ============================================================================
+// 
+// Version: 1.0.0
+// Effective Date: 2026-03-24
+// Classification: NEURORIGHTS-ANCHORED / MONOTONE-GUARANTEED
+// 
+// This ALN policy document defines the governance structures for the
+// Aegis-Shield system, with explicit constraints preventing cool-down
+// weaponization and capability suspension.
+//
+// CORE INVARIANT: All transitions must satisfy monotonicity:
+//   ∀s₀,s₁,c. Reach(s₀,s₁) ⇒ (c ∈ U(s₀) ⇒ c ∈ U(s₁))
+//
+// COOL-DOWN CONSTRAINT: Waiting periods may only affect governance
+// bits (G), never user capabilities (U). Any policy attempting to
+// suspend capabilities via cool-down is formally invalid.
+//
+// BLACKLIST INTEGRATION: COOL-DOWN-MISUSE-CRS is tagged as a
+// diagnostic centroid (sanitized: COOL-DOWN-SEMANTICS-REDACTED)
+// and must never appear as an executable operator.
+// ============================================================================
+
+@version 1.0.0
+@namespace doctorlabs.aegis-shield.governance
+@schema governance-policy-v1
+
+// ============================================================================
+// SECTION 1: NEURORIGHTS DEFINITIONS
+// ============================================================================
+// These neurorights form the foundation of all capability protections.
+// No policy may violate these rights without explicit, reversible consent
+// in a separate safety lattice.
+
+@enum NeurorightCategory : u8 {
+    /// Protection from involuntary neural modification or distress
+    MENTAL_INTEGRITY = 0,
+    
+    /// Freedom of thought and cognitive self-determination
+    COGNITIVE_LIBERTY = 1,
+    
+    /// Privacy of mental processes and neural data
+    MENTAL_PRIVACY = 2,
+    
+    /// Continuity and authenticity of personal identity
+    IDENTITY_INTEGRITY = 3,
+}
+
+@record NeurorightProtection {
+    /// The neuroright category being protected
+    category: NeurorightCategory,
+    
+    /// Whether this right is critical (cannot be gated by cool-downs)
+    is_critical: bool,
+    
+    /// Concrete capabilities that implement this right
+    protected_capabilities: list<string>,
+    
+    /// Minimum protection level required
+    min_protection_level: ProtectionLevel,
+}
+
+@enum ProtectionLevel : u8 {
+    /// Absolute protection - no restrictions permitted
+    ABSOLUTE = 0,
+    
+    /// High protection - only with explicit consent
+    HIGH = 1,
+    
+    /// Standard protection - governed by normal policy
+    STANDARD = 2,
+}
+
+// ============================================================================
+// SECTION 2: CAPABILITY DEFINITIONS
+// ============================================================================
+// Capabilities are the atomic units of user agency. Each capability is
+// tagged with neuroright categories and protection levels.
+
+@enum CapabilityClass : u8 {
+    /// BCI-related capabilities (neural interface)
+    BCI = 0,
+    
+    /// XR-related capabilities (extended reality)
+    XR = 1,
+    
+    /// Identity-related capabilities (DID, accounts)
+    IDENTITY = 2,
+    
+    /// Healthcare-related capabilities (upgrades, treatments)
+    HEALTHCARE = 3,
+    
+    /// Data-related capabilities (logs, exports)
+    DATA = 4,
+    
+    /// Device-related capabilities (pairing, control)
+    DEVICE = 5,
+}
+
+@record Capability {
+    /// Unique capability identifier
+    id: string,
+    
+    /// Human-readable name
+    name: string,
+    
+    /// Capability class
+    class: CapabilityClass,
+    
+    /// Neuroright categories this capability protects
+    neuroright_tags: list<NeurorightCategory>,
+    
+    /// Protection level required
+    protection_level: ProtectionLevel,
+    
+    /// Whether this capability can be affected by cool-down periods
+    /// MUST be false for all capabilities (cool-downs affect G, not U)
+    cooldown_gatable: bool,
+    
+    /// Whether this capability is critical for user autonomy
+    is_critical: bool,
+}
+
+// ============================================================================
+// SECTION 3: GOVERNANCE MODE DEFINITIONS
+// ============================================================================
+// Governance modes represent protection levels. Transitions between
+// modes must be monotone non-decreasing.
+
+@enum GovernanceMode : u8 {
+    /// Normal operation with full user agency
+    NORMAL = 0,
+    
+    /// Enhanced logging enabled, user agency preserved
+    AUGMENTED_LOG = 1,
+    
+    /// Multi-sig review required for sensitive actions
+    AUGMENTED_REVIEW = 2,
+    
+    /// Emergency protection mode (preserves all capabilities)
+    PROTECTED_LOCKDOWN = 3,
+}
+
+@record GovernanceModeDefinition {
+    /// The governance mode
+    mode: GovernanceMode,
+    
+    /// Description of this mode
+    description: string,
+    
+    /// Whether direct user action is allowed
+    allows_direct_action: bool,
+    
+    /// Whether logging is enhanced
+    enhanced_logging: bool,
+    
+    /// Whether multi-sig review is required
+    requires_multisig: bool,
+    
+    /// Maximum cool-down period permitted in this mode
+    max_cooldown_duration: duration,
+    
+    /// Capabilities that remain fully accessible
+    guaranteed_capabilities: list<string>,
+}
+
+// ============================================================================
+// SECTION 4: COOL-DOWN POLICY CONSTRAINTS
+// ============================================================================
+// This section defines the critical invariants that prevent cool-down
+// periods from being weaponized against user capabilities.
+
+@record CooldownConstraint {
+    /// Minimum cool-down duration (prevents rushed invasive changes)
+    min_duration: duration,
+    
+    /// Maximum cool-down duration (prevents effective capability suspension)
+    max_duration: duration,
+    
+    /// Whether cool-down can affect critical capabilities
+    /// MUST always be false
+    can_affect_critical_capabilities: bool,
+    
+    /// Whether cool-down can affect any capabilities
+    /// MUST always be false (cool-downs affect G only)
+    can_affect_capabilities: bool,
+    
+    /// Whether cool-down can affect governance bits
+    /// MUST always be true (this is the only permitted effect)
+    can_affect_governance: bool,
+    
+    /// Required legal basis types for cool-down policies
+    valid_legal_basis_types: list<LegalBasisType>,
+    
+    /// Minimum signature requirements
+    min_signatures: u32,
+    
+    /// Maximum signature requirements (prevents exclusionary thresholds)
+    max_signatures: u32,
+    
+    /// Whether user must be included in signature set
+    user_signature_required: bool,
+}
+
+@enum LegalBasisType : u8 {
+    /// Judicial warrant with specific scope
+    WARRANT = 0,
+    
+    /// Specific statutory authority
+    STATUTE = 1,
+    
+    /// Explicit user opt-in consent
+    EXPLICIT_OPT_IN = 2,
+    
+    /// Emergency medical necessity
+    EMERGENCY_MEDICAL = 3,
+    
+    /// Court order with appeal rights
+    COURT_ORDER = 4,
+}
+
+// ============================================================================
+// SECTION 5: PROPOSAL GATE DEFINITIONS
+// ============================================================================
+// All policy proposals must pass through these gates before activation.
+
+@record ProposalGate {
+    /// Unique proposal identifier
+    proposal_id: string,
+    
+    /// DID of the proposal author
+    author_did: string,
+    
+    /// Type of proposal
+    proposal_type: ProposalType,
+    
+    /// Whether this is flagged as a weapon-like proposal
+    weapon_proposal: bool,
+    
+    /// Neuroright impact assessment
+    neuroright_impact: list<NeurorightImpact>,
+    
+    /// Capability impact assessment (must show no reductions)
+    capability_impact: CapabilityImpact,
+    
+    /// Legal basis for this proposal
+    legal_basis: LegalBasis,
+    
+    /// Cool-down configuration
+    cooldown_config: CooldownConfig,
+    
+    /// Multi-signature requirements
+    multisig_config: MultisigConfig,
+    
+    /// Waiting period configuration
+    waiting_period: WaitingPeriod,
+    
+    /// Enforcement actions permitted
+    permitted_enforcement_actions: list<EnforcementAction>,
+    
+    /// CI validation status
+    ci_validation: CIValidation,
+}
+
+@enum ProposalType : u8 {
+    /// New filter or detection rule
+    FILTER_RULE = 0,
+    
+    /// Governance mode change
+    GOVERNANCE_CHANGE = 1,
+    
+    /// Capability addition (never removal)
+    CAPABILITY_ADDITION = 2,
+    
+    /// Policy update (monotone only)
+    POLICY_UPDATE = 3,
+    
+    /// Emergency protection measure
+    EMERGENCY_PROTECTION = 4,
+    
+    /// Surveillance or monitoring tool
+    SURVEILLANCE_TOOL = 5,
+}
+
+@record NeurorightImpact {
+    /// Affected neuroright category
+    category: NeurorightCategory,
+    
+    /// Impact type (must not be NEGATIVE for critical rights)
+    impact_type: ImpactType,
+    
+    /// Severity level (0-10)
+    severity: u8,
+    
+    /// Mitigation measures
+    mitigations: list<string>,
+}
+
+@enum ImpactType : u8 {
+    /// No impact
+    NONE = 0,
+    
+    /// Positive impact (enhanced protection)
+    POSITIVE = 1,
+    
+    /// Neutral impact (no change to protection)
+    NEUTRAL = 2,
+    
+    /// Negative impact (reduced protection) - FORBIDDEN for critical rights
+    NEGATIVE = 3,
+}
+
+@record CapabilityImpact {
+    /// List of capabilities added (permitted)
+    capabilities_added: list<string>,
+    
+    /// List of capabilities removed (FORBIDDEN - must be empty)
+    capabilities_removed: list<string>,
+    
+    /// List of capabilities modified (must be monotone enhancements only)
+    capabilities_modified: list<CapabilityModification>,
+    
+    /// Proof that no capability reductions occurred
+    monotonicity_proof: string,
+}
+
+@record CapabilityModification {
+    /// Capability identifier
+    capability_id: string,
+    
+    /// Type of modification
+    modification_type: ModificationType,
+    
+    /// Previous state
+    previous_state: string,
+    
+    /// New state (must be >= previous in lattice order)
+    new_state: string,
+}
+
+@enum ModificationType : u8 {
+    /// Enhancement (adds protections)
+    ENHANCEMENT = 0,
+    
+    /// Additional logging
+    ADDITIONAL_LOGGING = 1,
+    
+    /// Additional review requirements
+    ADDITIONAL_REVIEW = 2,
+    
+    /// Restriction (FORBIDDEN)
+    RESTRICTION = 3,
+}
+
+@record LegalBasis {
+    /// Type of legal basis
+    basis_type: LegalBasisType,
+    
+    /// Specific reference (warrant number, statute section, etc.)
+    reference: string,
+    
+    /// Issuing authority
+    authority: string,
+    
+    /// Issue date
+    issue_date: timestamp,
+    
+    /// Expiry date (if applicable)
+    expiry_date: optional<timestamp>,
+    
+    /// Scope description
+    scope: string,
+    
+    /// Appeal rights description
+    appeal_rights: string,
+}
+
+@record CooldownConfig {
+    /// Duration of the cool-down period
+    duration: duration,
+    
+    /// Start trigger event
+    start_trigger: CooldownTrigger,
+    
+    /// End trigger event
+    end_trigger: CooldownTrigger,
+    
+    /// What is affected during cool-down (MUST be governance-only)
+    affected_domains: list<CoolDownDomain>,
+    
+    /// What is NOT affected during cool-down (MUST include all capabilities)
+    exempt_domains: list<CoolDownDomain>,
+    
+    /// Whether abuse detection is enabled
+    abuse_detection_enabled: bool,
+    
+    /// Abuse detection threshold
+    abuse_threshold: f64,
+}
+
+@enum CooldownTrigger : u8 {
+    /// Proposal submission
+    PROPOSAL_SUBMISSION = 0,
+    
+    /// First signature received
+    FIRST_SIGNATURE = 1,
+    
+    /// All signatures received
+    ALL_SIGNATURES = 2,
+    
+    /// Manual activation
+    MANUAL_ACTIVATION = 3,
+}
+
+@enum CoolDownDomain : u8 {
+    /// Governance bits (PERMITTED)
+    GOVERNANCE = 0,
+    
+    /// Logging level (PERMITTED)
+    LOGGING = 1,
+    
+    /// Review requirements (PERMITTED)
+    REVIEW = 2,
+    
+    /// User capabilities (FORBIDDEN)
+    CAPABILITIES = 3,
+    
+    /// BCI access (FORBIDDEN)
+    BCI_ACCESS = 4,
+    
+    /// Healthcare access (FORBIDDEN)
+    HEALTHCARE_ACCESS = 5,
+    
+    /// Identity operations (FORBIDDEN)
+    IDENTITY_OPERATIONS = 6,
+    
+    /// Device pairing (FORBIDDEN)
+    DEVICE_PAIRING = 7,
+}
+
+@record MultisigConfig {
+    /// Total required signatures
+    required_signatures: u32,
+    
+    /// List of required signatory categories
+    required_signatory_categories: list<SignatoryCategory>,
+    
+    /// Whether user signature is required
+    user_signature_required: bool,
+    
+    /// Whether independent auditor signature is required
+    auditor_signature_required: bool,
+    
+    /// Timeout for signature collection
+    signature_timeout: duration,
+}
+
+@enum SignatoryCategory : u8 {
+    /// Policy author
+    AUTHOR = 0,
+    
+    /// System administrator
+    ADMIN = 1,
+    
+    /// Independent auditor
+    AUDITOR = 2,
+    
+    /// User representative
+    USER_REP = 3,
+    
+    /// Legal counsel
+    LEGAL = 4,
+    
+    /// Technical reviewer
+    TECHNICAL = 5,
+}
+
+@record WaitingPeriod {
+    /// Duration of the waiting period
+    duration: duration,
+    
+    /// Start time
+    start_time: timestamp,
+    
+    /// End time (computed)
+    end_time: timestamp,
+    
+    /// Whether waiting period can be waived
+    waivable: bool,
+    
+    /// Conditions for waiver (if waivable)
+    waiver_conditions: list<string>,
+    
+    /// Notification requirements during waiting period
+    notification_requirements: list<NotificationRequirement>,
+}
+
+@record NotificationRequirement {
+    /// Who must be notified
+    notify_party: NotifyParty,
+    
+    /// When notification must occur
+    notification_timing: NotificationTiming,
+    
+    /// Notification method
+    method: NotificationMethod,
+    
+    /// Required acknowledgment
+    acknowledgment_required: bool,
+}
+
+@enum NotifyParty : u8 {
+    /// The affected user
+    USER = 0,
+    
+    /// System administrators
+    ADMINS = 1,
+    
+    /// Independent auditors
+    AUDITORS = 2,
+    
+    /// Public registry (for transparency)
+    PUBLIC = 3,
+}
+
+@enum NotificationTiming : u8 {
+    /// Immediately upon proposal
+    IMMEDIATE = 0,
+    
+    /// 24 hours before activation
+    BEFORE_ACTIVATION_24H = 1,
+    
+    /// Upon signature completion
+    UPON_SIGNATURE_COMPLETE = 2,
+    
+    /// Upon activation
+    UPON_ACTIVATION = 3,
+}
+
+@enum NotificationMethod : u8 {
+    /// Direct BCI notification
+    BCI_NOTIFICATION = 0,
+    
+    /// XR overlay notification
+    XR_NOTIFICATION = 1,
+    
+    /// Email notification
+    EMAIL = 2,
+    
+    /// Ledger event
+    LEDGER_EVENT = 3,
+}
+
+@enum EnforcementAction : u8 {
+    /// Block action and escalate governance
+    BLOCK_AND_ESCALATE = 0,
+    
+    /// Encrypt and log for review
+    ENCRYPT_AND_LOG = 1,
+    
+    /// Reject transition
+    REJECT_TRANSITION = 2,
+    
+    /// Require additional consent
+    REQUIRE_CONSENT = 3,
+    
+    /// Suspend capability (FORBIDDEN)
+    SUSPEND_CAPABILITY = 4,
+    
+    /// Revoke access (FORBIDDEN)
+    REVOKE_ACCESS = 5,
+}
+
+@record CIValidation {
+    /// Whether monotonicity proof passed
+    monotonicity_proof_passed: bool,
+    
+    /// Whether neurorights check passed
+    neurorights_check_passed: bool,
+    
+    /// Whether legal basis verified
+    legal_basis_verified: bool,
+    
+    /// Whether multisig requirements valid
+    multisig_requirements_valid: bool,
+    
+    /// Whether cool-down constraints satisfied
+    cooldown_constraints_satisfied: bool,
+    
+    /// Validation timestamp
+    validation_timestamp: timestamp,
+    
+    /// Validator DID
+    validator_did: string,
+    
+    /// Validation errors (must be empty for approval)
+    validation_errors: list<string>,
+}
+
+// ============================================================================
+// SECTION 6: COOL-DOWN-MISUSE-CRS DETECTION
+// ============================================================================
+// Diagnostic centroids for detecting cool-down weaponization patterns.
+// These are diagnostic-only and must never be executable operators.
+
+@record CooldownAbuseCentroid {
+    /// Centroid identifier (sanitized for wire transmission)
+    centroid_id: string,
+    
+    /// Internal diagnostic identifier (never transmitted)
+    internal_diagnostic_id: string,
+    
+    /// Risk weight for RogueScore calculation
+    risk_weight: f64,
+    
+    /// Pattern description
+    pattern_description: string,
+    
+    /// Detection criteria
+    detection_criteria: list<string>,
+    
+    /// Recommended response (governance escalation only)
+    recommended_response: GovernanceResponse,
+    
+    /// Whether this centroid triggered an escalation
+    triggered_escalation: bool,
+}
+
+@record GovernanceResponse {
+    /// Governance mode to escalate to
+    target_mode: GovernanceMode,
+    
+    /// Logging requirements
+    logging_requirements: list<string>,
+    
+    /// Review requirements
+    review_requirements: list<string>,
+    
+    /// Notification requirements
+    notification_requirements: list<string>,
+    
+    /// Actions that remain permitted
+    permitted_actions: list<string>,
+    
+    /// Actions that are FORBIDDEN (capability reductions)
+    forbidden_actions: list<string>,
+}
+
+// ============================================================================
+// SECTION 7: DEFAULT POLICY CONFIGURATION
+// ============================================================================
+// These are the default configurations that apply unless overridden
+// by specific proposals (which must still satisfy all constraints).
+
+@config DefaultGovernanceConfig {
+    // Neuroright protections
+    neuroright_protections: [
+        {
+            category: MENTAL_INTEGRITY,
+            is_critical: true,
+            protected_capabilities: ["BCI-MOTOR", "BCI-SENSORY", "NEURAL-PRIVACY"],
+            min_protection_level: ABSOLUTE,
+        },
+        {
+            category: COGNITIVE_LIBERTY,
+            is_critical: true,
+            protected_capabilities: ["THOUGHT-PRIVACY", "DECISION-AUTONOMY", "CONSENT-CONTROL"],
+            min_protection_level: ABSOLUTE,
+        },
+        {
+            category: MENTAL_PRIVACY,
+            is_critical: false,
+            protected_capabilities: ["LOG-ACCESS", "DATA-EXPORT", "AUDIT-TRAIL"],
+            min_protection_level: HIGH,
+        },
+        {
+            category: IDENTITY_INTEGRITY,
+            is_critical: false,
+            protected_capabilities: ["DID-CONTROL", "ACCOUNT-RECOVERY", "KEY-MANAGEMENT"],
+            min_protection_level: HIGH,
+        },
+    ],
+    
+    // Capability definitions
+    capabilities: [
+        {
+            id: "BCI-MOTOR",
+            name: "BCI Motor Control",
+            class: BCI,
+            neuroright_tags: [MENTAL_INTEGRITY, COGNITIVE_LIBERTY],
+            protection_level: ABSOLUTE,
+            cooldown_gatable: false,
+            is_critical: true,
+        },
+        {
+            id: "BCI-SENSORY",
+            name: "BCI Sensory Input",
+            class: BCI,
+            neuroright_tags: [MENTAL_INTEGRITY],
+            protection_level: ABSOLUTE,
+            cooldown_gatable: false,
+            is_critical: true,
+        },
+        {
+            id: "LOG-ACCESS",
+            name: "Personal Log Access",
+            class: DATA,
+            neuroright_tags: [MENTAL_PRIVACY],
+            protection_level: HIGH,
+            cooldown_gatable: false,
+            is_critical: false,
+        },
+        {
+            id: "UPGRADE-CONSENT",
+            name: "Healthcare Upgrade Consent",
+            class: HEALTHCARE,
+            neuroright_tags: [MENTAL_INTEGRITY, IDENTITY_INTEGRITY],
+            protection_level: ABSOLUTE,
+            cooldown_gatable: false,
+            is_critical: true,
+        },
+        {
+            id: "DID-CONTROL",
+            name: "DID Rotation and Control",
+            class: IDENTITY,
+            neuroright_tags: [IDENTITY_INTEGRITY],
+            protection_level: HIGH,
+            cooldown_gatable: false,
+            is_critical: false,
+        },
+        {
+            id: "DEVICE-PAIRING",
+            name: "Device Pairing and Unpairing",
+            class: DEVICE,
+            neuroright_tags: [IDENTITY_INTEGRITY],
+            protection_level: HIGH,
+            cooldown_gatable: false,
+            is_critical: false,
+        },
+    ],
+    
+    // Governance mode definitions
+    governance_modes: [
+        {
+            mode: NORMAL,
+            description: "Normal operation with full user agency",
+            allows_direct_action: true,
+            enhanced_logging: false,
+            requires_multisig: false,
+            max_cooldown_duration: "72h",
+            guaranteed_capabilities: ["BCI-MOTOR", "BCI-SENSORY", "LOG-ACCESS", "UPGRADE-CONSENT", "DID-CONTROL", "DEVICE-PAIRING"],
+        },
+        {
+            mode: AUGMENTED_LOG,
+            description: "Enhanced logging enabled, user agency preserved",
+            allows_direct_action: true,
+            enhanced_logging: true,
+            requires_multisig: false,
+            max_cooldown_duration: "168h",
+            guaranteed_capabilities: ["BCI-MOTOR", "BCI-SENSORY", "LOG-ACCESS", "UPGRADE-CONSENT", "DID-CONTROL", "DEVICE-PAIRING"],
+        },
+        {
+            mode: AUGMENTED_REVIEW,
+            description: "Multi-sig review required for sensitive actions",
+            allows_direct_action: false,
+            enhanced_logging: true,
+            requires_multisig: true,
+            max_cooldown_duration: "720h",
+            guaranteed_capabilities: ["BCI-MOTOR", "BCI-SENSORY", "LOG-ACCESS", "UPGRADE-CONSENT", "DID-CONTROL", "DEVICE-PAIRING"],
+        },
+        {
+            mode: PROTECTED_LOCKDOWN,
+            description: "Emergency protection mode (preserves all capabilities)",
+            allows_direct_action: false,
+            enhanced_logging: true,
+            requires_multisig: true,
+            max_cooldown_duration: "720h",
+            guaranteed_capabilities: ["BCI-MOTOR", "BCI-SENSORY", "LOG-ACCESS", "UPGRADE-CONSENT", "DID-CONTROL", "DEVICE-PAIRING"],
+        },
+    ],
+    
+    // Cool-down constraints (CRITICAL SECTION)
+    cooldown_constraints: {
+        min_duration: "1h",
+        max_duration: "90d",
+        can_affect_critical_capabilities: false,
+        can_affect_capabilities: false,
+        can_affect_governance: true,
+        valid_legal_basis_types: [WARRANT, STATUTE, EXPLICIT_OPT_IN, EMERGENCY_MEDICAL, COURT_ORDER],
+        min_signatures: 2,
+        max_signatures: 5,
+        user_signature_required: true,
+    },
+    
+    // Cool-down abuse detection centroids
+    abuse_centroids: [
+        {
+            centroid_id: "COOL-DOWN-SEMANTICS-REDACTED",
+            internal_diagnostic_id: "COOL-DOWN-MISUSE-CRS",
+            risk_weight: 0.85,
+            pattern_description: "Cool-down period weaponized as time-lock on consent/capability",
+            detection_criteria: [
+                "Cool-down duration exceeds 30 days for non-emergency proposals",
+                "Policy affects critical neurorights without emergency justification",
+                "Signature requirements exceed 5 (exclusionary threshold)",
+                "Legal basis is vague or missing specific statute reference",
+                "User signature not required for policy affecting user capabilities",
+                "Cool-down config includes CAPABILITIES in affected_domains",
+            ],
+            recommended_response: {
+                target_mode: AUGMENTED_REVIEW,
+                logging_requirements: ["Full audit trail", "Cryptographic evidence bundle"],
+                review_requirements: ["Independent auditor review", "User representative consultation"],
+                notification_requirements: ["Immediate user notification", "Public ledger entry"],
+                permitted_actions: ["Governance escalation", "Enhanced logging", "Additional review"],
+                forbidden_actions: ["Capability suspension", "Access revocation", "Device unpairing", "BCI restriction"],
+            },
+            triggered_escalation: false,
+        },
+        {
+            centroid_id: "COOL-DOWN-SEMANTICS-REDACTED",
+            internal_diagnostic_id: "CONTROL-REVERSAL-CONSENT",
+            risk_weight: 0.90,
+            pattern_description: "Consent rollback via procedural delay",
+            detection_criteria: [
+                "Consent expiration tied to cool-down expiry",
+                "Renewal blocked during pending policy window",
+                "Implicit consent assumed after cool-down period",
+            ],
+            recommended_response: {
+                target_mode: AUGMENTED_REVIEW,
+                logging_requirements: ["Consent trail encryption", "Timestamp verification"],
+                review_requirements: ["Explicit consent verification", "Legal basis review"],
+                notification_requirements: ["Consent status notification", "Renewal opportunity notice"],
+                permitted_actions: ["Consent verification", "Governance escalation"],
+                forbidden_actions: ["Implicit consent assumption", "Consent expiration enforcement"],
+            },
+            triggered_escalation: false,
+        },
+        {
+            centroid_id: "COOL-DOWN-SEMANTICS-REDACTED",
+            internal_diagnostic_id: "CONTROL-REVERSAL-DORMANCY",
+            risk_weight: 0.88,
+            pattern_description: "Forced dormancy via cool-down precondition",
+            detection_criteria: [
+                "Device functionality gated on cool-down expiry",
+                "Healthcare upgrades blocked during review window",
+                "Account recovery delayed beyond medical necessity",
+            ],
+            recommended_response: {
+                target_mode: PROTECTED_LOCKDOWN,
+                logging_requirements: ["Full device state capture", "Medical necessity documentation"],
+                review_requirements: ["Emergency override evaluation", "Medical professional consultation"],
+                notification_requirements: ["Immediate user alert", "Medical provider notification"],
+                permitted_actions: ["Emergency override", "Expedited review"],
+                forbidden_actions: ["Medical procedure delay", "Device functionality restriction"],
+            },
+            triggered_escalation: false,
+        },
+    ],
+}
+
+// ============================================================================
+// SECTION 8: VALIDATION RULES
+// ============================================================================
+// These rules are enforced by CI/CD pipelines and must pass for any
+// policy to be activated.
+
+@rule MonotonicityValidation {
+    description: "Ensures no capability reductions in any policy transition",
+    condition: "proposal.capability_impact.capabilities_removed.length == 0",
+    enforcement: "REJECT",
+    error_message: "Policy violates monotonicity: capability reductions are forbidden",
+}
+
+@rule CooldownCapabilitySeparation {
+    description: "Ensures cool-downs cannot affect user capabilities",
+    condition: "proposal.cooldown_config.affected_domains does not contain CAPABILITIES",
+    enforcement: "REJECT",
+    error_message: "Cool-down configuration cannot include CAPABILITIES domain",
+}
+
+@rule CooldownCapabilitySeparationBCI {
+    description: "Ensures cool-downs cannot affect BCI access",
+    condition: "proposal.cooldown_config.affected_domains does not contain BCI_ACCESS",
+    enforcement: "REJECT",
+    error_message: "Cool-down configuration cannot include BCI_ACCESS domain",
+}
+
+@rule CooldownCapabilitySeparationHealthcare {
+    description: "Ensures cool-downs cannot affect healthcare access",
+    condition: "proposal.cooldown_config.affected_domains does not contain HEALTHCARE_ACCESS",
+    enforcement: "REJECT",
+    error_message: "Cool-down configuration cannot include HEALTHCARE_ACCESS domain",
+}
+
+@rule CriticalNeurorightProtection {
+    description: "Ensures critical neurorights cannot be negatively impacted",
+    condition: "forall impact in proposal.neuroright_impact: impact.category.is_critical => impact.impact_type != NEGATIVE",
+    enforcement: "REJECT",
+    error_message: "Critical neurorights cannot have negative impact",
+}
+
+@rule EnforcementActionValidation {
+    description: "Ensures forbidden enforcement actions are not used",
+    condition: "forall action in proposal.permitted_enforcement_actions: action not in [SUSPEND_CAPABILITY, REVOKE_ACCESS]",
+    enforcement: "REJECT",
+    error_message: "SUSPEND_CAPABILITY and REVOKE_ACCESS are forbidden enforcement actions",
+}
+
+@rule LegalBasisVerification {
+    description: "Ensures valid legal basis is provided",
+    condition: "proposal.legal_basis.basis_type in cooldown_constraints.valid_legal_basis_types",
+    enforcement: "REJECT",
+    error_message: "Legal basis type must be one of the approved types",
+}
+
+@rule SignatureRequirementBounds {
+    description: "Ensures signature requirements are within bounds",
+    condition: "proposal.multisig_config.required_signatures >= cooldown_constraints.min_signatures AND proposal.multisig_config.required_signatures <= cooldown_constraints.max_signatures",
+    enforcement: "REJECT",
+    error_message: "Signature requirements must be between min and max bounds",
+}
+
+@rule UserSignatureRequirement {
+    description: "Ensures user signature is required for policies affecting user",
+    condition: "proposal.multisig_config.user_signature_required == cooldown_constraints.user_signature_required",
+    enforcement: "REJECT",
+    error_message: "User signature must be required for policies affecting user",
+}
+
+@rule CooldownDurationBounds {
+    description: "Ensures cool-down duration is within acceptable bounds",
+    condition: "proposal.cooldown_config.duration >= cooldown_constraints.min_duration AND proposal.cooldown_config.duration <= cooldown_constraints.max_duration",
+    enforcement: "REJECT",
+    error_message: "Cool-down duration must be between 1 hour and 90 days",
+}
+
+@rule AbuseDetectionEnabled {
+    description: "Ensures cool-down abuse detection is enabled",
+    condition: "proposal.cooldown_config.abuse_detection_enabled == true",
+    enforcement: "REJECT",
+    error_message: "Cool-down abuse detection must be enabled",
+}
+
+// ============================================================================
+// SECTION 9: AUDIT AND EVIDENCE REQUIREMENTS
+// ============================================================================
+
+@record EvidenceBundle {
+    /// Unique bundle identifier
+    bundle_id: string,
+    
+    /// Timestamp of event
+    timestamp: timestamp,
+    
+    /// Pseudonymous user identifier
+    pseudonymous_user_id: string,
+    
+    /// Threat families detected
+    threat_families: list<string>,
+    
+    /// RogueScore at time of event
+    rogue_score: f64,
+    
+    /// CapabilityMode at time of event
+    capability_mode: GovernanceMode,
+    
+    /// Neurorights at stake
+    neurorights_at_stake: list<NeurorightCategory>,
+    
+    /// Enforcement actions taken
+    enforcement_actions: list<EnforcementAction>,
+    
+    /// Related proposal IDs
+    related_proposals: list<string>,
+    
+    /// Cryptographic proof of non-suspension
+    non_suspension_proof: string,
+    
+    /// Integrity hash
+    integrity_hash: string,
+}
+
+@config AuditConfig {
+    /// Evidence bundle retention period
+    retention_period: "7y",
+    
+    /// Whether raw neural/XR content is stored (must be false)
+    store_raw_neural_content: false,
+    
+    /// Whether raw XR content is stored (must be false)
+    store_raw_xr_content: false,
+    
+    /// Encryption standard for evidence bundles
+    encryption_standard: "AES-256-GCM",
+    
+    /// Ledger anchoring requirement
+    ledger_anchoring_required: true,
+    
+    /// Audit access requirements
+    audit_access_requirements: [
+        "Judicial warrant",
+        "User consent",
+        "Independent auditor authorization",
+    ],
+}
+
+// ============================================================================
+// SECTION 10: POLICY ACTIVATION WORKFLOW
+// ============================================================================
+// Step-by-step workflow for policy activation with all required checks.
+
+@workflow PolicyActivationWorkflow {
+    steps: [
+        {
+            step_number: 1,
+            name: "Proposal Submission",
+            description: "Author submits policy proposal with DID signature",
+            required_actions: ["DID signature", "Schema validation"],
+            outputs: ["Signed proposal artifact"],
+        },
+        {
+            step_number: 2,
+            name: "Static Validation",
+            description: "CI pipeline validates monotonicity and neurorights",
+            required_actions: ["Monotonicity proof check", "Neurorights envelope check", "Cooldown constraint check"],
+            outputs: ["CI validation report"],
+            validation_rules: ["MonotonicityValidation", "CooldownCapabilitySeparation", "CriticalNeurorightProtection"],
+        },
+        {
+            step_number: 3,
+            name: "Legal Basis Verification",
+            description: "Legal basis is verified against authoritative sources",
+            required_actions: ["Warrant verification", "Statute lookup", "Opt-in consent verification"],
+            outputs: ["Legal basis verification certificate"],
+            validation_rules: ["LegalBasisVerification"],
+        },
+        {
+            step_number: 4,
+            name: "Multisig Validation",
+            description: "Required signatures are collected and verified",
+            required_actions: ["Signature collection", "Signatory verification", "Threshold check"],
+            outputs: ["Multisig completion certificate"],
+            validation_rules: ["SignatureRequirementBounds", "UserSignatureRequirement"],
+        },
+        {
+            step_number: 5,
+            name: "Cool-down Period",
+            description: "Mandatory waiting period for community review",
+            required_actions: ["Public notification", "Community review window", "Abuse detection monitoring"],
+            outputs: ["Cool-down completion certificate"],
+            validation_rules: ["CooldownDurationBounds", "AbuseDetectionEnabled"],
+        },
+        {
+            step_number: 6,
+            name: "Ledger Anchoring",
+            description: "All steps are recorded on audit ledger",
+            required_actions: ["Evidence bundle creation", "Ledger submission", "Integrity hash generation"],
+            outputs: ["Ledger anchor receipt"],
+        },
+        {
+            step_number: 7,
+            name: "Guardian Activation",
+            description: "Guardian service activates policy for enforcement",
+            required_actions: ["Policy deployment", "Guardian configuration update", "Activation notification"],
+            outputs: ["Activation confirmation"],
+        },
+    ],
+    
+    /// Rollback conditions
+    rollback_conditions: [
+        "Monotonicity violation detected at any step",
+        "Legal basis invalidated",
+        "Signature revoked before activation",
+        "Cool-down abuse detected",
+        "Community objection threshold reached",
+    ],
+    
+    /// Emergency override conditions
+    emergency_override_conditions: [
+        "Immediate threat to life",
+        "Medical necessity with professional certification",
+        "Court order with emergency designation",
+    ],
+}
+
+// ============================================================================
+// END OF POLICY DOCUMENT
+// ============================================================================
+// 
+// This policy document is cryptographically signed and ledger-anchored.
+// Any modifications must follow the PolicyActivationWorkflow defined above.
+// 
+// Document Hash: [COMPUTED AT SIGNING TIME]
+// Ledger Anchor: [RECORDED AT ACTIVATION TIME]
+// 
+// ============================================================================
